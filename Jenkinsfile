@@ -1,65 +1,54 @@
 pipeline {
-    agent {
-        label 'maven' // Use a specific label for your agent
-    }
-    environment {
-        PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
-        registry = 'https://vodaf.jfrog.io' // Ensure this is the correct Artifactory URL
-    }
+    agent any
+
     stages {
-        stage("Build") {
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Build') {
             steps {
                 script {
-                    retry(3) {
-                        timeout(time: 30, unit: 'MINUTES') {
-                            echo "---------------------unit build started--------------"
-                            sh 'mvn clean deploy -Dmaven.test.skip=true'
-                            echo "---------------------unit build completed--------------"
-                        }
-                    }
+                    echo '---------------------unit build started--------------'
+                    sh 'mvn clean deploy -Dmaven.test.skip=true'
+                    echo '---------------------unit build completed--------------'
                 }
             }
         }
-        stage("Test") {
+        stage('Test') {
             steps {
                 script {
-                    retry(3) {
-                        timeout(time: 15, unit: 'MINUTES') {
-                            echo "---------------------unit test started--------------"
-                            sh 'mvn surefire-report:report'
-                            echo "---------------------unit test completed--------------"
-                        }
-                    }
+                    echo '---------------------unit test started--------------'
+                    sh 'mvn surefire-report:report'
+                    echo '---------------------unit test completed--------------'
                 }
             }
         }
-        stage("Jar Publish") {
+        stage('Jar Publish') {
             steps {
                 script {
-                    retry(3) {
-                        echo '<--------------- Jar Publish Started --------------->'
-                        def server = Artifactory.newServer(url: "${registry}/artifactory", credentialsId: "Jfrog-cre")
-                        def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}"
-                        def uploadSpec = """{
-                            "files": [
-                                {
-                                    "pattern": "jarstaging/(*)",
-                                    "target": "libs-release-local/{1}",
-                                    "flat": "false",
-                                    "props" : "${properties}",
-                                    "exclusions": [ "*.sha1", "*.md5"]
-                                }
-                            ]
-                        }"""
-                        try {
-                            def buildInfo = server.upload(uploadSpec)
-                            buildInfo.env.collect()
-                            server.publishBuildInfo(buildInfo)
-                            echo '<--------------- Jar Publish Ended --------------->'
-                        } catch (Exception e) {
-                            echo "Error during artifact upload: ${e.getMessage()}"
-                            throw e
-                        }
+                    echo '<--------------- Jar Publish Started --------------->'
+                    def server = Artifactory.newServer(url: 'https://vodaf.jfrog.io/artifactory', credentialsId: 'Jfrog-cre')
+                    def buildInfo = Artifactory.newBuildInfo()
+
+                    try {
+                        server.upload spec: """{
+                            "files": [{
+                                "pattern": "target/*.jar",
+                                "target": "libs-release-local/com/valaxy/demo-workshop/"
+                            },
+                            {
+                                "pattern": "target/*.pom",
+                                "target": "libs-release-local/com/valaxy/demo-workshop/"
+                            }]
+                        }""", buildInfo: buildInfo
+                        
+                        server.publishBuildInfo buildInfo
+                        echo '<--------------- Jar Publish Completed --------------->'
+                    } catch (Exception e) {
+                        echo "Error during artifact upload: ${e.getMessage()}"
+                        error "Build failed due to artifact upload error."
                     }
                 }
             }
@@ -67,11 +56,15 @@ pipeline {
     }
     post {
         always {
-            echo 'Cleaning up workspace...'
-            deleteDir()
+            script {
+                echo 'Cleaning up workspace...'
+                deleteDir()
+            }
         }
         failure {
-            echo 'Build failed.'
+            script {
+                echo 'Build failed.'
+            }
         }
     }
 }
