@@ -4,6 +4,7 @@ pipeline {
     }
     environment {
         PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
+        registry = 'https://vodaf.jfrog.io' // Define the registry URL here
     }
     stages {
         stage("Build") {
@@ -53,7 +54,7 @@ pipeline {
                 script {
                     retry(3) {
                         echo '<--------------- Jar Publish Started --------------->'
-                        def server = Artifactory.newServer url: registry + "/artifactory", credentialsId: "Jfrog-cre"
+                        def server = Artifactory.newServer(url: "${registry}/artifactory", credentialsId: "Jfrog-cre")
                         def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}"
                         def uploadSpec = """{
                             "files": [
