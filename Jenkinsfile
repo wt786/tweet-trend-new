@@ -1,6 +1,6 @@
 
 def registry = 'https://vodaf.jfrog.io'
-def imageName = 'vodaf.jfrog.io/waqas-project-docker-local/waqas-project'
+def imageName = 'vodaf.jfrog.io/waqas-project-docker-local/waseem'
 def version   = '2.1.2'
 pipeline {
     agent {
