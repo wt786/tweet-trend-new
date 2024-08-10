@@ -4,7 +4,7 @@ pipeline {
     }
     environment {
         PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
-        registry = 'https://vodaf.jfrog.io' // Define the registry URL here
+        registry = 'https://vodaf.jfrog.io' // Ensure this is the correct Artifactory URL
     }
     stages {
         stage("Build") {
@@ -67,10 +67,15 @@ pipeline {
                                 }
                             ]
                         }"""
-                        def buildInfo = server.upload(uploadSpec)
-                        buildInfo.env.collect()
-                        server.publishBuildInfo(buildInfo)
-                        echo '<--------------- Jar Publish Ended --------------->'
+                        try {
+                            def buildInfo = server.upload(uploadSpec)
+                            buildInfo.env.collect()
+                            server.publishBuildInfo(buildInfo)
+                            echo '<--------------- Jar Publish Ended --------------->'
+                        } catch (Exception e) {
+                            echo "Error during artifact upload: ${e.getMessage()}"
+                            throw e
+                        }
                     }
                 }
             }
