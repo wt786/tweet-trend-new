@@ -1,7 +1,6 @@
-def registry = 'https://vodaf.jfrog.io/'
 pipeline {
     agent {
-        label 'maven' // Use a Maven-specific agent
+        label 'maven'
     }
     environment {
         PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
@@ -9,16 +8,16 @@ pipeline {
     stages {
         stage("Build") {
             steps {
-                echo "---------------------unit build started--------------"
+                echo "--------------------- Build Started ---------------------"
                 sh 'mvn clean deploy -Dmaven.test.skip=true'
-                echo "---------------------unit build completed--------------"
+                echo "--------------------- Build Completed ---------------------"
             }
         }
         stage("Test") {
             steps {
-                echo "---------------------unit test started--------------"
+                echo "--------------------- Unit Test Started ---------------------"
                 sh 'mvn surefire-report:report'
-                echo "---------------------unit test completed--------------"
+                echo "--------------------- Unit Test Completed ---------------------"
             }
         }
         stage('SonarQube Analysis') {
@@ -27,7 +26,7 @@ pipeline {
             }
             steps {
                 withSonarQubeEnv('sonarqube-server') {
-                    sh "${scannerHome}/bin/sonar-scanner"
+                    sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.javascript.linter.timeout=120000"
                 }
             }
         }
@@ -35,25 +34,37 @@ pipeline {
             steps {
                 script {
                     echo '<--------------- Jar Publish Started --------------->'
-                    def server = Artifactory.newServer url: "${registry}/artifactory", credentialsId: "Jfrog-cre"
+                    def server = Artifactory.newServer url: registry + "/artifactory", credentialsId: "Jfrog-cre"
                     def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}"
                     def uploadSpec = """{
                         "files": [
                             {
                                 "pattern": "jarstaging/(*)",
                                 "target": "libs-release-local/{1}",
-                                "flat": false,
-                                "props": "${properties}",
-                                "exclusions": ["*.sha1", "*.md5"]
+                                "flat": "false",
+                                "props" : "${properties}",
+                                "exclusions": [ "*.sha1", "*.md5" ]
                             }
                         ]
                     }"""
                     def buildInfo = server.upload(uploadSpec)
                     buildInfo.env.collect()
                     server.publishBuildInfo(buildInfo)
-                    echo '<--------------- Jar Publish Ended --------------->'
+                    echo '<--------------- Jar Publish Ended --------------->'  
                 }
             }
+        }
+    }
+    post {
+        always {
+            echo "Cleaning up workspace..."
+            deleteDir() // Clean up the workspace after the build
+        }
+        success {
+            echo "Build completed successfully."
+        }
+        failure {
+            echo "Build failed."
         }
     }
 }
