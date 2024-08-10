@@ -1,6 +1,7 @@
+def registry = 'https://vodaf.jfrog.io/'
 pipeline {
     agent {
-        label 'maven'
+        label 'maven' // Simplified agent syntax
     }
     environment {
         PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
@@ -8,16 +9,16 @@ pipeline {
     stages {
         stage("Build") {
             steps {
-                echo "--------------------- Build Started ---------------------"
+                echo "---------------------unit build started--------------"
                 sh 'mvn clean deploy -Dmaven.test.skip=true'
-                echo "--------------------- Build Completed ---------------------"
+                echo "---------------------unit test completed--------------"
             }
         }
         stage("Test") {
             steps {
-                echo "--------------------- Unit Test Started ---------------------"
+                echo "---------------------unit test started--------------"
                 sh 'mvn surefire-report:report'
-                echo "--------------------- Unit Test Completed ---------------------"
+                echo "---------------------unit test completed--------------"
             }
         }
         stage('SonarQube Analysis') {
@@ -26,7 +27,7 @@ pipeline {
             }
             steps {
                 withSonarQubeEnv('sonarqube-server') {
-                    sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.javascript.linter.timeout=120000"
+                    sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.exclusions=target/site/surefire-report.html -Dsonar.javascript.linter.timeout=300000 -Dsonar.javascript.node.max-old-space-size=2048 -Dsonar.projectName=YourProjectName -Dsonar.projectKey=YourProjectKey"
                 }
             }
         }
@@ -43,28 +44,25 @@ pipeline {
                                 "target": "libs-release-local/{1}",
                                 "flat": "false",
                                 "props" : "${properties}",
-                                "exclusions": [ "*.sha1", "*.md5" ]
+                                "exclusions": [ "*.sha1", "*.md5"]
                             }
                         ]
                     }"""
                     def buildInfo = server.upload(uploadSpec)
                     buildInfo.env.collect()
                     server.publishBuildInfo(buildInfo)
-                    echo '<--------------- Jar Publish Ended --------------->'  
+                    echo '<--------------- Jar Publish Ended --------------->'
                 }
             }
         }
     }
     post {
         always {
-            echo "Cleaning up workspace..."
-            deleteDir() // Clean up the workspace after the build
-        }
-        success {
-            echo "Build completed successfully."
+            echo 'Cleaning up workspace...'
+            deleteDir()
         }
         failure {
-            echo "Build failed."
+            echo 'Build failed.'
         }
     }
 }
