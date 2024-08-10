@@ -1,29 +1,17 @@
 pipeline {
-    agent any
-
+    agent {
+        node {
+            label 'maven'
+        }
+    }
+    environment {
+        PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
+    }
     stages {
-        stage('Checkout SCM') {
+        stage("build") {
             steps {
-                checkout scm
+                sh 'mvn clean deploy'
             }
         }
-        stage('Build') {
-            steps {
-                script {
-                    echo '---------------------unit build started--------------'
-                    sh 'mvn clean deploy -Dmaven.test.skip=true'
-                    echo '---------------------unit build completed--------------'
-                }
-            }
-        }
-        stage('Test') {
-            steps {
-                script {
-                    echo '---------------------unit test started--------------'
-                    sh 'mvn surefire-report:report'
-                    echo '---------------------unit test completed--------------'
-                }
-            }
-        }
-    } // Closing bracket for stages
-} // Closing bracket for pipeline
+    }
+}
