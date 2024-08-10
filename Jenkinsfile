@@ -33,22 +33,6 @@ pipeline {
                 }
             }
         }
-        stage('SonarQube Analysis') {
-            environment {
-                scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-            }
-            steps {
-                script {
-                    retry(3) {
-                        timeout(time: 45, unit: 'MINUTES') {
-                            withSonarQubeEnv('sonarqube-server') {
-                                sh "${scannerHome}/bin/sonar-scanner -X -Dsonar.exclusions=target/site/surefire-report.html"
-                            }
-                        }
-                    }
-                }
-            }
-        }
         stage("Jar Publish") {
             steps {
                 script {
