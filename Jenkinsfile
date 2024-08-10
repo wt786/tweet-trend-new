@@ -14,7 +14,7 @@ pipeline {
                         timeout(time: 30, unit: 'MINUTES') {
                             echo "---------------------unit build started--------------"
                             sh 'mvn clean deploy -Dmaven.test.skip=true'
-                            echo "---------------------unit test completed--------------"
+                            echo "---------------------unit build completed--------------"
                         }
                     }
                 }
