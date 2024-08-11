@@ -27,12 +27,12 @@ pipeline {
             }
         }
         stage("Jar Publish") {
-        steps {
-            script {
+            steps {
+                script {
                     echo '<--------------- Jar Publish Started --------------->'
-                     def server = Artifactory.newServer url:registry+"/artifactory" ,  credentialsId:"Jfrog-cre"
-                     def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}";
-                     def uploadSpec = """{
+                    def server = Artifactory.newServer url:registry+"/artifactory" ,  credentialsId:"Jfrog-cre"
+                    def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}";
+                    def uploadSpec = """{
                           "files": [
                             {
                               "pattern": "jarstaging/(*)",
@@ -43,34 +43,41 @@ pipeline {
                             }
                          ]
                      }"""
-                     def buildInfo = server.upload(uploadSpec)
-                     buildInfo.env.collect()
-                     server.publishBuildInfo(buildInfo)
-                     echo '<--------------- Jar Publish Ended --------------->'  
-            
-            }
-        }   
-    }
-    stage(" Docker Build ") {
-      steps {
-        script {
-           echo '<--------------- Docker Build Started --------------->'
-           app = docker.build(imageName+":"+version)
-           echo '<--------------- Docker Build Ends --------------->'
-        }
-      }
-    }
-
-            stage (" Docker Publish "){
-        steps {
-            script {
-               echo '<--------------- Docker Publish Started --------------->'  
-                docker.withRegistry(registry, 'Jfrog-cre'){
-                    app.push()
-                }    
-               echo '<--------------- Docker Publish Ended --------------->'  
+                    def buildInfo = server.upload(uploadSpec)
+                    buildInfo.env.collect()
+                    server.publishBuildInfo(buildInfo)
+                    echo '<--------------- Jar Publish Ended --------------->'
+                }
             }
         }
-    }   
+        stage("Prepare JAR for Docker") {
+            steps {
+                script {
+                    echo '<--------------- Copying JAR to Workspace Root --------------->'
+                    sh 'cp jarstaging/com/valaxy/demo-workshop/2.1.2/demo-workshop-2.1.2.jar ./'
+                    echo '<--------------- JAR Copy Completed --------------->'
+                }
+            }
+        }
+        stage("Docker Build") {
+            steps {
+                script {
+                    echo '<--------------- Docker Build Started --------------->'
+                    app = docker.build(imageName + ":" + version)
+                    echo '<--------------- Docker Build Ends --------------->'
+                }
+            }
+        }
+        stage("Docker Publish") {
+            steps {
+                script {
+                    echo '<--------------- Docker Publish Started --------------->'
+                    docker.withRegistry(registry, 'Jfrog-cre') {
+                        app.push()
+                    }
+                    echo '<--------------- Docker Publish Ended --------------->'
+                }
+            }
+        }
     }
 }
