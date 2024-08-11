@@ -15,8 +15,6 @@ pipeline {
                 echo "----------- build completed ----------"
             }
         }
-      
-        }
         stage('SonarQube analysis') {
             environment {
                 scannerHome = tool 'sonar-scanner'
