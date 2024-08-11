@@ -4,13 +4,22 @@ pipeline {
             label 'maven'
         }
     }
-    environment {
-        PATH = "/opt/apache-maven-3.9.8/bin:$PATH"
-    }
+environment {
+    PATH = "/opt/apache-maven-3.9.2/bin:$PATH"
+}
     stages {
-        stage("build") {
+        stage("build"){
             steps {
-                sh 'mvn clean deploy'
+                 echo "----------- build started ----------"
+                sh 'mvn clean deploy -Dmaven.test.skip=true'
+                 echo "----------- build complted ----------"
+            }
+        }
+        stage("test"){
+            steps{
+                echo "----------- unit test started ----------"
+                sh 'mvn surefire-report:report'
+                 echo "----------- unit test Complted ----------"
             }
         }
        
